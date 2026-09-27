@@ -29,6 +29,26 @@ func HTML[T []byte | string](w http.ResponseWriter, r *http.Request, body T) {
 	builder.Write()
 }
 
+// HTMLWithCSP creates a new HTML response with a 200 status code and a
+// Content-Security-Policy header. Templated pages must use this (via
+// view.HTML) instead of HTML so the policy ships as a header rather than
+// a meta tag.
+func HTMLWithCSP[T []byte | string](w http.ResponseWriter, r *http.Request, body T, cspPolicy string) {
+	builder := NewBuilder(w, r).
+		WithHeader("Content-Type", "text/html; charset=utf-8").
+		WithHeader("Cache-Control", "no-cache, max-age=0, must-revalidate, no-store").
+		WithHeader("Content-Security-Policy", cspPolicy)
+
+	switch v := any(body).(type) {
+	case []byte:
+		builder = builder.WithBodyAsBytes(v)
+	case string:
+		builder = builder.WithBodyAsString(v)
+	}
+
+	builder.Write()
+}
+
 // HTMLServerError sends an internal error to the client.
 func HTMLServerError(w http.ResponseWriter, r *http.Request, err error) {
 	slog.Error(http.StatusText(http.StatusInternalServerError),
